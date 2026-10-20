@@ -9,6 +9,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from native_deps import collect_linux, collect_mac
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -20,33 +22,37 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def set_linux_rpath(binary: Path) -> None:
-    current = subprocess.run(
-        ["patchelf", "--print-rpath", str(binary)], capture_output=True, text=True, check=True
-    ).stdout.strip()
-    if current != "$ORIGIN":
-        subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(binary)], check=True)
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("platform", choices=("darwin-arm64", "linux-amd64"))
-    parser.add_argument("support_dir", type=Path, help="directory with libseekdb and its runtime libraries")
+    parser.add_argument("support_dir", type=Path, help="directory containing libseekdb")
     parser.add_argument("output", type=Path, help="output bundle.tar.gz path")
     parser.add_argument("--seekdb-bin", type=Path, required=True, help="locally supplied seekdb executable")
+    parser.add_argument("--library-dir", type=Path, action="append", default=[],
+                        help="additional directory to search for native dependencies (repeatable)")
     args = parser.parse_args()
+
+    library_name = "libseekdb.dylib" if args.platform == "darwin-arm64" else "libseekdb.so"
+    support = args.support_dir.resolve(strict=True)
+    executable = args.seekdb_bin.resolve(strict=True)
+    search = [directory.resolve(strict=True) for directory in args.library_dir]
+    if not (support / library_name).is_file():
+        parser.error(f"missing {library_name} in {support}")
 
     with tempfile.TemporaryDirectory(prefix="seekdb-release-") as temp_name:
         stage = Path(temp_name) / "stage"
         stage.mkdir()
-        for support_file in args.support_dir.iterdir():
-            if support_file.is_file() and support_file.name.startswith("lib"):
-                shutil.copy2(support_file, stage / support_file.name)
+        shutil.copy2(support / library_name, stage / library_name)
         binary = stage / "seekdb"
-        shutil.copy2(args.seekdb_bin, binary)
+        shutil.copy2(executable, binary)
         binary.chmod(0o755)
-        if args.platform == "linux-amd64":
-            set_linux_rpath(binary)
+        try:
+            if args.platform == "linux-amd64":
+                collect_linux(stage, [support, *search])
+            else:
+                collect_mac(stage, support, executable, search)
+        except (ValueError, FileNotFoundError, subprocess.CalledProcessError) as error:
+            parser.error(str(error))
         subprocess.run(
             [sys.executable, str(ROOT / "scripts" / "package_native.py"),
              args.platform, str(stage), str(args.output)],

@@ -88,17 +88,23 @@ The root `go.work` uses the local platform modules for source checkout builds:
 go test ./...
 ```
 
-To prepare another native release, supply the seekdb executable and a directory
-with a matching prebuilt `libseekdb` plus its runtime libraries:
+To prepare another native release, run on the target platform and supply the
+seekdb executable and a matching prebuilt `libseekdb`. The script uses `ldd`
+and `patchelf` on Linux, or `otool`, `install_name_tool`, `lipo`, and `codesign`
+on macOS, to collect and relocate runtime libraries recursively. Use
+`--library-dir` for dependencies outside the SDK directory (repeatable):
 
 ```sh
 python3 scripts/prepare_native_bundle.py linux-amd64 /path/to/support \
-  native/linux-amd64/bundle.tar.gz --seekdb-bin /path/to/seekdb
+  native/linux-amd64/bundle.tar.gz --seekdb-bin /path/to/seekdb \
+  --library-dir /path/to/openssl/lib
 ```
 
-On Linux, the inputs need `$ORIGIN` runtime search paths. The preparation
-script sets this path on the copied seekdb executable and validates the shared
-libraries. Each platform module has its own `go.mod` and is published by a tag
-prefixed with its directory, for example `native/linux-amd64/v1.4.0`. The root
-module uses a root tag such as `v0.1.0`. Publish changed native bundles under
-new, immutable versions.
+On Linux, `objdump` is also required; the script checks that the collected
+libraries do not require a glibc version newer than EL7's 2.17. Keep building
+on an EL7-compatible host, since this check cannot lower the ABI of a binary.
+The script sets `$ORIGIN` on the copied ELF files and verifies that every
+non-system dependency resolves inside the bundle. Each platform module has its
+own `go.mod` and is published by a tag prefixed with its directory, for example
+`native/linux-amd64/v1.4.0`. The root module uses a root tag such as `v0.1.0`.
+Publish changed native bundles under new, immutable versions.

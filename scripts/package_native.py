@@ -8,6 +8,8 @@ import subprocess
 import tarfile
 from pathlib import Path
 
+from native_deps import verify_linux, verify_mac
+
 PLATFORMS = {
     "darwin-arm64": ("libseekdb.dylib", "seekdb"),
     "linux-amd64": ("libseekdb.so", "seekdb"),
@@ -36,35 +38,13 @@ def main() -> None:
     if missing:
         parser.error(f"missing native files in {native_dir}: {', '.join(sorted(missing))}")
 
-    if args.platform == "darwin-arm64":
-        runtime = {"libssl.3.dylib", "libcrypto.3.dylib"}
-        missing = runtime - {path.name for path in files}
-        if missing:
-            parser.error(f"missing bundled macOS runtime libraries: {', '.join(sorted(missing))}")
-        try:
-            result = subprocess.run(
-                ["otool", "-L", str(native_dir / library)], capture_output=True, text=True
-            )
-        except FileNotFoundError:
-            parser.error("otool is required to validate macOS shared libraries")
-        if result.returncode != 0 or any(
-            f"@loader_path/{name}" not in result.stdout for name in runtime
-        ):
-            parser.error(f"{library} must reference bundled OpenSSL through @loader_path")
-    else:
-        runtime = {"libssl.so.3", "libcrypto.so.3", "libaio.so.1", "libz.so.1"}
-        missing = runtime - {path.name for path in files}
-        if missing:
-            parser.error(f"missing bundled Linux runtime libraries: {', '.join(sorted(missing))}")
-        for path in files:
-            try:
-                result = subprocess.run(
-                    ["patchelf", "--print-rpath", str(path)], capture_output=True, text=True
-                )
-            except FileNotFoundError:
-                parser.error("patchelf is required to validate Linux runtime search paths")
-            if result.returncode != 0 or "$ORIGIN" not in result.stdout.strip().split(":"):
-                parser.error(f"{path} must have a $ORIGIN runtime search path")
+    try:
+        if args.platform == "darwin-arm64":
+            verify_mac(native_dir)
+        else:
+            verify_linux(native_dir)
+    except (ValueError, FileNotFoundError, subprocess.CalledProcessError) as error:
+        parser.error(str(error))
 
     destination = args.output.resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
