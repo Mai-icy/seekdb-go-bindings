@@ -60,9 +60,10 @@ bundle in the resulting program. At the first `Open`, the program extracts the
 files under the user cache directory (`seekdb-go/<bundle SHA-256>/`) and loads
 `libseekdb`. `Open` does not download files.
 
-Go downloads the selected native module from its normal module proxy or this
-GitHub repository. Dependency management commands such as `go mod download all`
-may fetch both platform modules. A new native release uses a new module tag;
+Go downloads native modules from its normal module proxy or this GitHub
+repository. A fresh `go get` can download both platform bundles because the
+root module declares both dependencies; the build embeds only the selected
+platform. A new native release uses a new module tag;
 existing `go.mod` and `go.sum` files keep applications on their selected
 version until they upgrade it.
 
