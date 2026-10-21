@@ -1,22 +1,17 @@
-//go:build (darwin && arm64) || (linux && amd64)
+//go:build (darwin && arm64) || (linux && amd64) || (linux && arm64) || (windows && amd64)
 
 package seekdb
 
 import (
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
 func TestOpenConnectionOptionsAndClose(t *testing.T) {
-	root, err := os.MkdirTemp("/tmp", "sdb-go-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.RemoveAll(root) })
+	root := t.TempDir()
 	dir := filepath.Join(root, "database")
 	db, err := Open(dir)
 	if err != nil {
@@ -40,14 +35,20 @@ func TestOpenConnectionOptionsAndClose(t *testing.T) {
 		network, address = "unix", endpoint.UnixSocket
 	case "tcp":
 		network, address = "tcp", net.JoinHostPort(endpoint.Host, fmt.Sprint(endpoint.Port))
+	case "named_pipe":
+		if endpoint.NamedPipe == "" {
+			t.Fatal("named pipe endpoint is empty")
+		}
 	default:
 		t.Fatalf("unexpected transport %q", endpoint.Transport)
 	}
-	conn, err := net.DialTimeout(network, address, 3*time.Second)
-	if err != nil {
-		t.Fatalf("seekdb endpoint %s %s: %v", network, address, err)
+	if network != "" {
+		conn, err := net.DialTimeout(network, address, 3*time.Second)
+		if err != nil {
+			t.Fatalf("seekdb endpoint %s %s: %v", network, address, err)
+		}
+		conn.Close()
 	}
-	conn.Close()
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}

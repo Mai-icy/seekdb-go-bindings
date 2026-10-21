@@ -4,4 +4,6 @@ use (
 	.
 	./native/darwin-arm64
 	./native/linux-amd64
+	./native/linux-arm64
+	./native/windows-amd64
 )

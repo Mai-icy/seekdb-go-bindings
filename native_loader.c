@@ -1,6 +1,7 @@
 #include "native_loader.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -55,7 +56,19 @@ int sdb_load(const char *path, char *error, size_t error_size)
     if (sdb_library)
         return SEEKDB_SUCCESS;
 #ifdef _WIN32
-    sdb_library = LoadLibraryA(path);
+    int wide_length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
+    if (wide_length == 0) {
+        copy_error(error, error_size, "invalid UTF-8 library path");
+        return SEEKDB_INTERNAL_ERROR;
+    }
+    wchar_t *wide_path = malloc((size_t)wide_length * sizeof(wchar_t));
+    if (!wide_path) {
+        copy_error(error, error_size, "out of memory converting library path");
+        return SEEKDB_INTERNAL_ERROR;
+    }
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide_path, wide_length);
+    sdb_library = LoadLibraryW(wide_path);
+    free(wide_path);
     if (!sdb_library) {
         char message[128];
         snprintf(message, sizeof(message), "LoadLibrary failed (Windows error %lu)",

@@ -1,0 +1,3 @@
+Source: http://6.12.233.133:4000/1.4.0.0/libseekdb-windows-x86_64/libseekdb-1.4.0.0-r1-windows-x86_64-sdb596e4a5c9809-bndcdb303fbbd5.tar.gz
+SHA-256: 46cd2390d7bf85595bc956b2b4bd218458c51078636bae5f190fa1e67a36fefe
+Runtime baseline: Windows x86_64 with the MSVC runtime

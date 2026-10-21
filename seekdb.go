@@ -47,30 +47,32 @@ type DB struct {
 	DBDir  string
 }
 
-var nativeOnce sync.Once
-var nativeError error
+var nativeMu sync.Mutex
+var nativeReady bool
 
 func prepareNative() error {
-	nativeOnce.Do(func() {
-		dir, err := unpackBundle()
-		if err != nil {
-			nativeError = err
-			return
-		}
-		library := C.CString(filepath.Join(dir, platformLibrary()))
-		defer C.free(unsafe.Pointer(library))
-		var message [4096]C.char
-		if rc := C.sdb_load(library, &message[0], C.size_t(len(message))); rc != C.SEEKDB_SUCCESS {
-			nativeError = fmt.Errorf("load libseekdb: %s", C.GoString(&message[0]))
-			return
-		}
-		binary := C.CString(filepath.Join(dir, platformExecutable()))
-		defer C.free(unsafe.Pointer(binary))
-		if rc := C.sdb_set_binary_path(binary); rc != C.SEEKDB_SUCCESS {
-			nativeError = fmt.Errorf("set seekdb executable path: code %d", int(rc))
-		}
-	})
-	return nativeError
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	if nativeReady {
+		return nil
+	}
+	dir, err := unpackBundle()
+	if err != nil {
+		return err
+	}
+	library := C.CString(filepath.Join(dir, platformLibrary()))
+	defer C.free(unsafe.Pointer(library))
+	var message [4096]C.char
+	if rc := C.sdb_load(library, &message[0], C.size_t(len(message))); rc != C.SEEKDB_SUCCESS {
+		return fmt.Errorf("load libseekdb: %s", C.GoString(&message[0]))
+	}
+	binary := C.CString(filepath.Join(dir, platformExecutable()))
+	defer C.free(unsafe.Pointer(binary))
+	if rc := C.sdb_set_binary_path(binary); rc != C.SEEKDB_SUCCESS {
+		return fmt.Errorf("set seekdb executable path: code %d", int(rc))
+	}
+	nativeReady = true
+	return nil
 }
 
 // Open starts or reuses a local seekdb instance rooted at dbDir.

@@ -8,11 +8,13 @@ import subprocess
 import tarfile
 from pathlib import Path
 
-from native_deps import verify_linux, verify_mac
+from native_deps import verify_linux_static, verify_mac
 
 PLATFORMS = {
     "darwin-arm64": ("libseekdb.dylib", "seekdb"),
     "linux-amd64": ("libseekdb.so", "seekdb"),
+    "linux-arm64": ("libseekdb.so", "seekdb"),
+    "windows-amd64": ("seekdb.dll", "seekdb.exe"),
 }
 
 
@@ -32,6 +34,7 @@ def main() -> None:
             path.name in required
             or path.name.endswith((".dylib", ".so"))
             or ".so." in path.name
+            or (args.platform == "windows-amd64" and path.name.endswith(".dll"))
         )
     )
     missing = required - {path.name for path in files}
@@ -41,8 +44,8 @@ def main() -> None:
     try:
         if args.platform == "darwin-arm64":
             verify_mac(native_dir)
-        else:
-            verify_linux(native_dir)
+        elif args.platform.startswith("linux-"):
+            verify_linux_static(native_dir)
     except (ValueError, FileNotFoundError, subprocess.CalledProcessError) as error:
         parser.error(str(error))
 
@@ -53,22 +56,23 @@ def main() -> None:
         fileobj=output, mode="wb", filename="", mtime=0
     ) as compressed, tarfile.open(fileobj=compressed, mode="w") as archive:
         for path in files:
-            data = path.read_bytes()
-            name = "seekdb.bin" if path.name == executable else path.name
+            name = "seekdb.bin" if path.name == executable and args.platform != "windows-amd64" else path.name
             info = tarfile.TarInfo(name)
-            info.size = len(data)
+            info.size = path.stat().st_size
             info.mode = 0o755 if path.name == executable or path.name == library else 0o644
             info.mtime = 0
             info.uid = info.gid = 0
             info.uname = info.gname = ""
-            archive.addfile(info, io.BytesIO(data))
-            print(f"included {name} ({len(data)} bytes)")
-        info = tarfile.TarInfo(executable)
-        info.size = len(launcher)
-        info.mode = 0o755
-        info.mtime = 0
-        archive.addfile(info, io.BytesIO(launcher))
-        print(f"included {executable} launcher ({len(launcher)} bytes)")
+            with path.open("rb") as source:
+                archive.addfile(info, source)
+            print(f"included {name} ({info.size} bytes)")
+        if args.platform != "windows-amd64":
+            info = tarfile.TarInfo(executable)
+            info.size = len(launcher)
+            info.mode = 0o755
+            info.mtime = 0
+            archive.addfile(info, io.BytesIO(launcher))
+            print(f"included {executable} launcher ({len(launcher)} bytes)")
     print(f"wrote {destination} ({destination.stat().st_size} bytes)")
 
 

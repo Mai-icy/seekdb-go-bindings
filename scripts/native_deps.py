@@ -73,6 +73,17 @@ def verify_linux(stage: Path) -> None:
                 raise ValueError(f"{name} required by {path} resolves outside the bundle: {resolved}")
 
 
+def verify_linux_static(stage: Path) -> None:
+    """Check an already bundled ELF runtime without executing target binaries."""
+    for path in libraries(stage):
+        rpath = run("patchelf", "--print-rpath", str(path)).strip().split(":")
+        if "$ORIGIN" not in rpath:
+            raise ValueError(f"{path} must have a $ORIGIN runtime search path")
+        for name in run("patchelf", "--print-needed", str(path)).splitlines():
+            if not is_glibc(name) and not (stage / name).is_file():
+                raise ValueError(f"{name} required by {path} is missing from the bundle")
+
+
 def collect_linux(stage: Path, search: list[Path]) -> None:
     queue = deque([stage / "seekdb", stage / "libseekdb.so"])
     while queue:
