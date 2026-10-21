@@ -73,11 +73,10 @@ version until they upgrade it.
 The four bundles are built from the seekdb 1.4.0.0-r1 C SDK runtime archives.
 Each native module records its exact source URL, SHA-256, and runtime baseline
 in `SOURCE.txt`. The Linux bundles include OpenSSL 1.1, libaio, and zlib.
-The macOS and Linux amd64 bundles were exercised by `go test ./...` on their
-respective platforms. The Linux arm64 bundle passed archive integrity and ELF
-dependency checks. The Windows amd64 bundle passed archive integrity and PE
-architecture checks, and the Go binding was cross-compiled with MinGW; its
-runtime behavior has not yet been tested on Windows.
+CI runs `Open`, `ConnectionOptions`, `Close`, and reopen tests on all four target
+platforms, using both checked-out bundles and published native modules. The
+Windows test checks that the named pipe endpoint is present; it does not yet
+connect a MySQL protocol client through that pipe.
 
 | Input/artifact | SHA-256 |
 | --- | --- |
