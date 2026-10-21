@@ -1,4 +1,8 @@
-github.com/Mai-icy/seekdb-go-bindings/native/darwin-arm64 v1.4.0 h1:qYhsyQnePclSK6fPBlMZthGgoWmxQnwep+i7MXVXTBU=
-github.com/Mai-icy/seekdb-go-bindings/native/darwin-arm64 v1.4.0/go.mod h1:bwWPAVvxKpB5HYgjA6H38Ls5NEnIjntOi0XEAimlTdQ=
-github.com/Mai-icy/seekdb-go-bindings/native/linux-amd64 v1.4.0 h1:pHNAcLYqGWqIz/d30dbHpLmL60SARPfYhZznSpPl+CU=
-github.com/Mai-icy/seekdb-go-bindings/native/linux-amd64 v1.4.0/go.mod h1:NAhCeHYM5vONcOENDIrCub85dg76z66ROlhcpfV8h84=
+github.com/Mai-icy/seekdb-go-bindings/native/darwin-arm64 v1.4.1 h1:pkfF9As8VI8wTwt/vT3lm3fkadI5iZpq0ve5jzJ3PcM=
+github.com/Mai-icy/seekdb-go-bindings/native/darwin-arm64 v1.4.1/go.mod h1:bwWPAVvxKpB5HYgjA6H38Ls5NEnIjntOi0XEAimlTdQ=
+github.com/Mai-icy/seekdb-go-bindings/native/linux-amd64 v1.4.1 h1:rjKbpkpUpqCTl2NV1TIC9BmOrJZlb+z7CU9woWzHKY0=
+github.com/Mai-icy/seekdb-go-bindings/native/linux-amd64 v1.4.1/go.mod h1:NAhCeHYM5vONcOENDIrCub85dg76z66ROlhcpfV8h84=
+github.com/Mai-icy/seekdb-go-bindings/native/linux-arm64 v1.4.1 h1:2YgQz6O30L+JOrqbpM0Wus/RTWRvKPx2xKIDX3GRu30=
+github.com/Mai-icy/seekdb-go-bindings/native/linux-arm64 v1.4.1/go.mod h1:kJ/3xlnu2pm59vt8AVLK7o88OBmCSCOjGVqSooSmDzM=
+github.com/Mai-icy/seekdb-go-bindings/native/windows-amd64 v1.4.1 h1:nw42LS707yUxz+OYTk3W1Zf2KOhOyo5GJyNNRpS1/TM=
+github.com/Mai-icy/seekdb-go-bindings/native/windows-amd64 v1.4.1/go.mod h1:qKE8hQbi/RpFWStnLJKUC1AGdrG8nbq+BhDr0UsSYIY=
