@@ -1,3 +1,4 @@
+// Local workspace template. Copy to go.work to use checked-out native modules.
 go 1.22
 
 use (

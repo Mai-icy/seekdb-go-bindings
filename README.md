@@ -88,11 +88,22 @@ runtime behavior has not yet been tested on Windows.
 
 ## Develop and release
 
-The root `go.work` uses the local platform modules for source checkout builds:
+Copy the workspace template when testing changes to checked-out platform modules.
+The generated `go.work` is ignored by Git:
 
 ```sh
+cp go.work.dev go.work
 go test ./...
 ```
+
+To test the same tagged native modules that users download, bypass the local
+workspace:
+
+```sh
+GOWORK=off go test -count=1 ./...
+```
+
+CI runs both commands on macOS arm64, Linux amd64/arm64, and Windows amd64.
 
 To prepare another native release, run on the target platform and supply the
 seekdb executable and a matching prebuilt `libseekdb`. The script uses `ldd`
@@ -122,3 +133,12 @@ non-system dependency resolves inside the bundle. Each platform module has its
 own `go.mod` and is published by a tag prefixed with its directory, for example
 `native/linux-amd64/v1.4.1`. The root module uses a root tag such as `v0.2.0`.
 Publish changed native bundles under new, immutable versions.
+
+Before tagging, `python3 scripts/verify_bundles.py` checks the four archives
+against the checksums above, the expected bundle contents, and their recorded
+release inputs. After CI passes on `main`, run
+`scripts/release.sh ROOT_VERSION NATIVE_VERSION [REMOTE]`. The script verifies
+the bundles, publishes immutable platform tags, updates the root `go.mod` and
+`go.sum`, and tests the tagged dependencies. If those dependency files change,
+commit them through a PR and rerun the script after merging; it then publishes
+the root tag. Repeating the command does not move existing tags.

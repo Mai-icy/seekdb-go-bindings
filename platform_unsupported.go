@@ -6,7 +6,3 @@ func platformBundle() []byte       { return nil }
 func platformLibrary() string      { return "" }
 func platformExecutable() string   { return "" }
 func platformServerBinary() string { return "" }
-
-func lockNativeCache(string) (func(), error) {
-	return func() {}, nil
-}
