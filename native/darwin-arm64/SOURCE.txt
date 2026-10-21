@@ -1,3 +1,0 @@
-Source: http://6.12.233.133:4000/1.4.0.0/libseekdb-macos-arm64/libseekdb-1.4.0.0-r1-macos15.6-arm64-sdb596e4a5c9809-bndcdb303fbbd5e.tar.gz
-SHA-256: 347db30614ff0e90f35277aeaa1f7091f6bf7223ed7c3c717d68d6b5f0731a8a
-Runtime baseline: macOS 15.6.1 or newer

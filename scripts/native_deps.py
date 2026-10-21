@@ -102,8 +102,8 @@ def collect_linux(stage: Path, search: list[Path]) -> None:
     for path in libraries(stage):
         output = run("objdump", "-T", str(path))
         versions = [tuple(map(int, match.split("."))) for match in re.findall(r"GLIBC_(\d+(?:\.\d+)+)", output)]
-        if versions and max(versions) > (2, 17):
-            raise ValueError(f"{path} requires GLIBC_{'.'.join(map(str, max(versions)))}, above EL7's 2.17")
+        if versions and max(versions) > (2, 28):
+            raise ValueError(f"{path} requires GLIBC_{'.'.join(map(str, max(versions)))}, above the 2.28 baseline")
 
 
 def mac_dependencies(path: Path) -> list[str]:

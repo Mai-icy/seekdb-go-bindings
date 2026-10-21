@@ -1,3 +1,0 @@
-Source: http://6.12.233.133:4000/1.4.0.0/libseekdb-linux-x86_64/libseekdb-1.4.0.0-r1-linux-x86_64-glibc2.28-sdb596e4a5c9809-bndcdb303fbbd5e.tar.gz
-SHA-256: 90f0d3e39fa53a23331fd432fa7f6c1bfe2016cb784f659ff6cb3252890f17cd
-Runtime baseline: glibc 2.28 or newer

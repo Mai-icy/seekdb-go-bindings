@@ -4,6 +4,7 @@
 import argparse
 import gzip
 import io
+import struct
 import subprocess
 import tarfile
 from pathlib import Path
@@ -18,6 +19,41 @@ PLATFORMS = {
 }
 
 
+def bundle_files(platform: str, native_dir: Path) -> list[Path]:
+    library, executable = PLATFORMS[platform]
+    required = {library, executable}
+    files = sorted(
+        path for path in native_dir.iterdir()
+        if path.is_file() and (
+            path.name in required
+            or path.name.endswith((".dylib", ".so"))
+            or ".so." in path.name
+            or (platform == "windows-amd64" and path.name.endswith(".dll"))
+        )
+    )
+    missing = required - {path.name for path in files}
+    if missing:
+        raise ValueError(f"missing native files in {native_dir}: {', '.join(sorted(missing))}")
+    return files
+
+
+def verify_machine(platform: str, path: Path) -> None:
+    if platform == "darwin-arm64":
+        return  # verify_mac checks the Mach-O architecture.
+    with path.open("rb") as binary:
+        header = binary.read(64)
+        if platform.startswith("linux-"):
+            expected = 62 if platform == "linux-amd64" else 183
+            if header[:4] != b"\x7fELF" or struct.unpack_from("<H", header, 18)[0] != expected:
+                raise ValueError(f"wrong ELF architecture: {path}")
+        else:
+            if header[:2] != b"MZ":
+                raise ValueError(f"not a Windows PE file: {path}")
+            binary.seek(struct.unpack_from("<I", header, 0x3C)[0])
+            if binary.read(4) != b"PE\0\0" or struct.unpack("<H", binary.read(2))[0] != 0x8664:
+                raise ValueError(f"wrong PE architecture: {path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("platform", choices=PLATFORMS)
@@ -26,22 +62,10 @@ def main() -> None:
     args = parser.parse_args()
 
     native_dir = args.native_dir.resolve(strict=True)
-    library, executable = PLATFORMS[args.platform]
-    required = {library, executable}
-    files = sorted(
-        path for path in native_dir.iterdir()
-        if path.is_file() and (
-            path.name in required
-            or path.name.endswith((".dylib", ".so"))
-            or ".so." in path.name
-            or (args.platform == "windows-amd64" and path.name.endswith(".dll"))
-        )
-    )
-    missing = required - {path.name for path in files}
-    if missing:
-        parser.error(f"missing native files in {native_dir}: {', '.join(sorted(missing))}")
-
     try:
+        files = bundle_files(args.platform, native_dir)
+        for path in files:
+            verify_machine(args.platform, path)
         if args.platform == "darwin-arm64":
             verify_mac(native_dir)
         elif args.platform.startswith("linux-"):
@@ -49,6 +73,7 @@ def main() -> None:
     except (ValueError, FileNotFoundError, subprocess.CalledProcessError) as error:
         parser.error(str(error))
 
+    library, executable = PLATFORMS[args.platform]
     destination = args.output.resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     launcher = b'#!/bin/sh\n"${0%/*}/seekdb.bin" "$@"\n'

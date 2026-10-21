@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 2 ] || [ "$#" -gt 3 ] ||
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ] ||
    [[ ! "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
    [[ ! "$2" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "usage: scripts/release.sh ROOT_VERSION NATIVE_VERSION [REMOTE]" >&2
+    echo "usage: scripts/release.sh ROOT_VERSION NATIVE_VERSION INPUT_ROOT [REMOTE]" >&2
     exit 2
 fi
 
 root_version="$1"
 native_version="$2"
-remote="${3:-origin}"
+if [ ! -d "$3" ]; then
+    echo "missing input directory: $3" >&2
+    exit 1
+fi
+input_root="$(cd "$3" && pwd)"
+remote="${4:-origin}"
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
 
@@ -23,7 +28,7 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-python3 scripts/verify_bundles.py
+python3 scripts/verify_bundles.py --input-root "$input_root"
 git fetch --quiet --tags "$remote"
 
 platforms=(darwin-arm64 linux-amd64 linux-arm64 windows-amd64)
@@ -55,9 +60,10 @@ git push "$remote" "${tag_refs[@]}"
 
 # Direct fetch avoids waiting for a newly pushed platform tag to reach a module proxy.
 export GOWORK=off
-export GOPRIVATE=github.com/Mai-icy/seekdb-go-bindings
+module_path="$(go list -m)"
+export GOPRIVATE="${GOPRIVATE:+${GOPRIVATE},}${module_path}"
 for platform in "${platforms[@]}"; do
-    go mod edit -require="github.com/Mai-icy/seekdb-go-bindings/native/${platform}@${native_version}"
+    go mod edit -require="${module_path}/native/${platform}@${native_version}"
 done
 go mod tidy
 if ! git diff --quiet -- go.mod go.sum; then
